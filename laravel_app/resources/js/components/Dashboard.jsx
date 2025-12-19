@@ -1,12 +1,41 @@
 import React, { useState, useEffect } from 'react';
 
+// Simple Alert Modal (Added as requested, overlaying the original UI)
+const WafAlert = ({ onClose }) => (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden border-t-4 border-red-600 transform scale-100 transition-all">
+            <div className="p-6 text-center">
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
+                    <svg className="h-10 w-10 text-red-600 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">WAF INTERCEPTED!</h3>
+                <p className="text-gray-500 mb-6">
+                    Our Machine Learning model detected a malicious <b>XSS Payload</b> in your input. The request was blocked (403 Forbidden).
+                </p>
+                <button
+                    onClick={onClose}
+                    className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:text-sm"
+                >
+                    Dismiss Alert
+                </button>
+            </div>
+            <div className="bg-gray-50 px-4 py-3 sm:px-6 flex justify-between items-center text-xs text-gray-400">
+                <span>Error Code: 403</span>
+                <span>Security Level: HIGH</span>
+            </div>
+        </div>
+    </div>
+);
+
 export default function BlogConfig() {
     const [mode, setMode] = useState('secure'); // 'secure' | 'vulnerable'
     const [comments, setComments] = useState([]);
     const [commentInput, setCommentInput] = useState('');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
     const [notification, setNotification] = useState(null);
+    const [showWafAlert, setShowWafAlert] = useState(false); // State for the popup
 
     // Initial Load & Reflected XSS Check
     useEffect(() => {
@@ -16,6 +45,12 @@ export default function BlogConfig() {
         const params = new URLSearchParams(window.location.search);
         const q = params.get('q');
         if (q) {
+            // Check for malicious URL params for "Interactive Pop" request
+            if (mode === 'secure' && (q.includes('<') || q.includes('javascript:'))) {
+                // Simulate WAF detection on URL
+                setShowWafAlert(true);
+            }
+
             const breadcrumb = document.getElementById('dynamic-breadcrumb');
             if (breadcrumb) {
                 if (mode === 'vulnerable') {
@@ -45,7 +80,7 @@ export default function BlogConfig() {
 
     const handleCommentSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true); setError(null); setNotification(null);
+        setLoading(true); setNotification(null); setShowWafAlert(false);
 
         const endpoint = mode === 'secure' ? '/api/posts' : '/api/vulnerable/posts';
 
@@ -61,36 +96,43 @@ export default function BlogConfig() {
             });
 
             if (response.status === 403) {
-                const data = await response.json();
-                throw new Error(data.message || 'WAF BLOCKED: Malicious Payload Detected!');
+                // WAF BLOCK TRIGGER
+                setShowWafAlert(true);
+                throw new Error('Action blocked by WAF'); // Clean error handling
             }
+
+            const data = await response.json(); // Consume body
 
             setCommentInput('');
             fetchComments();
             setNotification({ type: 'success', msg: 'Comment posted successfully!' });
         } catch (err) {
-            setError(err.message);
-            setNotification({ type: 'error', msg: err.message });
+            // Only show bottom notification if it's NOT the WAF alert (to avoid double noise)
+            if (err.message !== 'Action blocked by WAF') {
+                setNotification({ type: 'error', msg: err.message });
+            }
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 text-slate-800 font-sans">
+        <div className="min-h-screen bg-gray-50 text-slate-800 font-sans relative">
+            {/* ALERT POPUP */}
+            {showWafAlert && <WafAlert onClose={() => setShowWafAlert(false)} />}
+
             {/* Header */}
             <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
                 <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">WAF</div>
-                        <span className="font-bold text-xl tracking-tight text-gray-900">XSS Detection</span>
+                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">W</div>
+                        <span className="font-bold text-xl tracking-tight text-gray-900">Waf Detection</span>
                     </div>
 
                     <form onSubmit={handleSearch} className="flex-1 max-w-lg mx-6 relative group">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                         </div>
-
                         <input
                             name="q"
                             type="text"
@@ -254,6 +296,10 @@ export default function BlogConfig() {
                     </div>
                 </aside>
             </main>
+            <style>{`
+                .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+                @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); }}
+            `}</style>
         </div>
     );
 }
