@@ -82,8 +82,8 @@ export default function BlogConfig() {
             <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
                 <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">S</div>
-                        <span className="font-bold text-xl tracking-tight text-gray-900">SecuriBlog</span>
+                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">WAF</div>
+                        <span className="font-bold text-xl tracking-tight text-gray-900">XSS Detection</span>
                     </div>
 
                     <form onSubmit={handleSearch} className="flex-1 max-w-lg mx-6 relative group">
