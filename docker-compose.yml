@@ -1,0 +1,24 @@
+services:
+  app:
+    build:
+      context: ./laravel_app
+      dockerfile: Dockerfile
+    container_name: xss_app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./laravel_app:/var/www/html
+    environment:
+      ML_SERVICE_URL: http://ml_service:5000/predict
+    depends_on:
+      - ml_service
+
+  ml_service:
+    build:
+      context: ./ml_service
+      dockerfile: Dockerfile
+    container_name: xss_ml_service
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./ml_service:/app
